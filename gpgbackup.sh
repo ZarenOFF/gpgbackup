@@ -4,10 +4,9 @@
 
 # Параметры
 BACKUP_DEST="/backup/systembackup/"  # Путь для временного хранения бэкапа на сервере
-WEBDAV_URL="https://webdav.example.com/backup"  # URL WebDAV сервера
-WEBDAV_USER="your_webdav_username"  # Имя пользователя WebDAV
-WEBDAV_PASS_FILE="/root/.webdavpass"  # Файл с паролем WebDAV
+REMOTE_PATH="/path_to_your_backups/"
 GPG_RECIPIENT="put_your_recipient"  # Получатель GPG (email или ключ)
+RCLONE_ID="rcloneid"
 
 
 usage() {
@@ -22,7 +21,7 @@ while getopts "o:r:n:" opt; do
   case $opt in
     o) BACKUP_SOURCES+=("$OPTARG") ;;
     r) GPG_RECIPIENT="$OPTARG" ;;
-	  n) BACKUP_NAME="$OPTARG" ;;
+	n) BACKUP_NAME="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -52,14 +51,7 @@ gpg --output "$BACKUP_DEST/$ENCRYPTED_FILENAME" --encrypt --recipient "$GPG_RECI
 # Удаление оригинального архива
 rm "$BACKUP_DEST/$ARCHIVE_NAME"
 
-# Загрузка на WebDAV
-#WEBDAV_PASS=$(cat "$WEBDAV_PASS_FILE")
-#cadaver <<EOF
-#open $WEBDAV_URL
-#login $WEBDAV_USER $WEBDAV_PASS
-#put "$BACKUP_DEST/$ENCRYPTED_FILENAME"
-#quit
-#EOF
+rclone copy "$BACKUP_DEST/$ENCRYPTED_FILENAME" ${RCLONE_ID}:${REMOTE_PATH}
 
 # Очистка временных файлов
 #rm "$BACKUP_DEST/$ENCRYPTED_FILENAME"
