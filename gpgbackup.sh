@@ -4,7 +4,6 @@
 
 # Параметры
 BACKUP_DEST="/backup/systembackup/"  # Путь для временного хранения бэкапа на сервере
-REMOTE_PATH="/path_to_your_backups/"
 GPG_RECIPIENT="put_your_recipient"  # Получатель GPG (email или ключ)
 RCLONE_ID="rcloneid"
 
@@ -15,13 +14,15 @@ usage() {
 }
 
 BACKUP_SOURCES=()
+REMOTE_PATH="/path_to_your_backups/"
 BACKUP_NAME=""
 
-while getopts "o:r:n:" opt; do
+while getopts "o:r:n:p:" opt; do
   case $opt in
     o) BACKUP_SOURCES+=("$OPTARG") ;;
     r) GPG_RECIPIENT="$OPTARG" ;;
-	n) BACKUP_NAME="$OPTARG" ;;
+	  n) BACKUP_NAME="$OPTARG" ;;
+	  p) REMOTE_PATH="$OPTARG" ;;
     *) usage ;;
   esac
 done
