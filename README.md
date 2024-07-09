@@ -3,6 +3,10 @@
 
 This script creates encrypted backups of specified directories or files with `gpg`, uploads them to a remote server using `rclone`, and manages the number of backups by deleting the oldest ones if a specified limit is exceeded.
 
+## Preparation
+
+First of all you need to configure `gpg` and `rclone` to use this script. You can find guides **[here](https://github.com/ZarenOFF/gpgbackup/tree/master/docs)**.
+
 ## Usage
 
 ### Command Line Arguments
