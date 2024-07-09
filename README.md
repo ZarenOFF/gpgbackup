@@ -7,6 +7,13 @@ This script creates encrypted backups of specified directories or files with `gp
 
 First of all you need to configure `gpg` and `rclone` to use this script. You can find guides **[here](https://github.com/ZarenOFF/gpgbackup/tree/master/docs)**.
 
+After this you need to clone this repository and add execute permission to the script
+```bash
+git clone https://github.com/ZarenOFF/gpgbackup.git
+cd gpgbackup
+chmod +x gpgbackup.sh
+```
+
 ## Usage
 
 ### Command Line Arguments
