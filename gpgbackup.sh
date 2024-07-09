@@ -2,9 +2,9 @@
 exec >> /var/log/gpgbackup.log 2>&1
 
 usage() {
-  echo "Usage: $0 [-o <another_directory_or_file_to_backup> -o ...] -r <gpg_recipient> -n <backup_name> -p <remote_path> -m <backups_count> -i <rclone_id>"
+  echo "Usage: $0 [-o <another_directory_or_file_to_backup> -o ...] -r <gpg_recipient> -n <backup_name> -p <remote_path> -m <backups_count> -i <rclone_id> -d <backup_destination>"
   echo "Or using with config:"
-  echo "Usage: $0 -c <backup_path>"
+  echo "Usage: $0 -c <config_path>"
   exit 1
 }
 
@@ -43,9 +43,10 @@ log_command() {
 # Функция для обработки аргументов командной строки
 process_args() {
   local OPTIND
-  while getopts "c:o:r:n:p:m:i:" opt; do
+  while getopts "c:o:r:n:p:m:i:d:" opt; do
     case $opt in
       c) CONFIG_FILE="$OPTARG" ;;
+      d) BACKUP_DEST="$OPTARG" ;;
       o) BACKUP_SOURCES+=("$OPTARG") ;;
       r) GPG_RECIPIENT="$OPTARG" ;;
       n) BACKUP_NAME="$OPTARG" ;;
