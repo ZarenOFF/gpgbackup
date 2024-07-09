@@ -1,10 +1,10 @@
 #!/bin/bash
-
-# Usage - ./gpgbackup.sh -o /path/to/dir1 -o /path/to/file2 -o /path/to/dir3 -r recipient@example.com
-# Usage with config - ./gpgbackup.sh -c /path/to/backup.conf -o /path/to/dir1 -o /path/to/file2 -o /path/to/dir3
+exec >> /var/log/gpgbackup.log 2>&1
 
 usage() {
-  echo "Usage: $0 -o <directory_or_file_to_backup> [-o <another_directory_or_file_to_backup> ...] -r <gpg_recipient>"
+  echo "Usage: $0 [-o <another_directory_or_file_to_backup> -o ...] -r <gpg_recipient> -n <backup_name> -p <remote_path> -m <backups_count> -i <rclone_id>"
+  echo "Or using with config:"
+  echo "Usage: $0 -c <backup_path>"
   exit 1
 }
 
@@ -17,15 +17,33 @@ REMOTE_PATH="" # Путь для временных архивов
 BACKUP_NAME=""  # Имя архива
 MAX_BACKUPS=365
 
+######################################################################METHODS######################################################################
+
 log() {
   local message="$1"
-  echo "$message"
+  local timestamp=$(date +"%d.%m.%Y %H:%M:%S")
+  echo "[$timestamp] - $message"
 }
+
+log_command() {
+     local description="$1"
+     shift
+     "$@" 2>&1 | while IFS= read -r line; do
+       log "$line"
+     done
+     local status=${PIPESTATUS[0]}
+     if [ "$status" -eq 0 ]; then
+       log "$description succeeded"
+     else
+       log "$description failed with status $status"
+     fi
+     return "$status"
+   }
 
 # Функция для обработки аргументов командной строки
 process_args() {
   local OPTIND
-  while getopts "c:o:r:n:p:m:" opt; do
+  while getopts "c:o:r:n:p:m:i:" opt; do
     case $opt in
       c) CONFIG_FILE="$OPTARG" ;;
       o) BACKUP_SOURCES+=("$OPTARG") ;;
@@ -33,6 +51,7 @@ process_args() {
       n) BACKUP_NAME="$OPTARG" ;;
       p) REMOTE_PATH="$OPTARG" ;;
       m) MAX_BACKUPS="$OPTARG" ;;
+      i) RCLONE_ID="$OPTARG" ;;
       *) usage ;;
     esac
   done
@@ -45,6 +64,8 @@ check_required_vars() {
     usage
   fi
 }
+
+######################################################################METHODS END######################################################################
 
 # Первичное чтение параметров командной строки
 process_args "$@"
@@ -66,6 +87,8 @@ process_args "$@"
 # Проверка наличия обязательных переменных
 check_required_vars
 
+log "Starting backup \"${BACKUP_SOURCES[*]}\" to the remote \"$RCLONE_ID\" with recipient \"$GPG_RECIPIENT\" and remote path \"$REMOTE_PATH\""
+
 # Создание имени архива
 if [ -z "$BACKUP_NAME" ];
 then
@@ -77,29 +100,30 @@ else
 fi
 
 # Создание архива
-tar -czf "$BACKUP_DEST/$ARCHIVE_NAME" "${BACKUP_SOURCES[@]}"
+log_command "Creating archive" tar -czf "$BACKUP_DEST/$ARCHIVE_NAME" "${BACKUP_SOURCES[@]}"
 
 # Шифрование архива
 ENCRYPTED_FILENAME="$ARCHIVE_NAME.gpg"
-gpg --output "$BACKUP_DEST/$ENCRYPTED_FILENAME" --encrypt --recipient "$GPG_RECIPIENT" "$BACKUP_DEST/$ARCHIVE_NAME"
+log_command "Encrypting archive" gpg --output "$BACKUP_DEST/$ENCRYPTED_FILENAME" --encrypt --recipient "$GPG_RECIPIENT" "$BACKUP_DEST/$ARCHIVE_NAME"
 
 # Удаление оригинального архива
 rm "$BACKUP_DEST/$ARCHIVE_NAME"
 
-rclone copy "$BACKUP_DEST/$ENCRYPTED_FILENAME" "${RCLONE_ID}":"${REMOTE_PATH}"
+log_command "Copying encrypted archive to remote server" rclone copy "$BACKUP_DEST/$ENCRYPTED_FILENAME" "${RCLONE_ID}":"${REMOTE_PATH}"
 
 # Очистка временных файлов
 rm "$BACKUP_DEST/$ENCRYPTED_FILENAME"
 
 # Вывод информации о файлах в удаленной директории
 log "Detailed information about files in remote directory (${RCLONE_ID}:${REMOTE_PATH}):"
-rclone lsl "${RCLONE_ID}":"${REMOTE_PATH}" | sort -k3
+log_command "Listing files in remote directory" bash -c "rclone lsl \"${RCLONE_ID}:${REMOTE_PATH}\" | sort -k3"
 
 # Проверка количества файлов в удаленной директории и удаление самого старого, если их больше 7
 FILE_COUNT=$(rclone lsf --files-only "${RCLONE_ID}":"${REMOTE_PATH}" | wc -l)
 
+log "Current number of files in remote directory is $FILE_COUNT, maximum allowed is $MAX_BACKUPS"
+
 if [ "$FILE_COUNT" -gt "$MAX_BACKUPS" ]; then
   OLDEST_FILE=$(rclone lsl "${RCLONE_ID}":"${REMOTE_PATH}" | sort -k3 | head -n 1 | awk '{print $NF}')
-  log "Deleting oldest file: $OLDEST_FILE"
-  rclone deletefile "${RCLONE_ID}":"${REMOTE_PATH}"/"$OLDEST_FILE"
+  log_command "Deleting oldest file: $OLDEST_FILE" rclone deletefile "${RCLONE_ID}":"${REMOTE_PATH}"/"$OLDEST_FILE"
 fi
