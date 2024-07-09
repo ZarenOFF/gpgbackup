@@ -125,6 +125,9 @@ FILE_COUNT=$(rclone lsf --files-only "${RCLONE_ID}":"${REMOTE_PATH}" | wc -l)
 log "Current number of files in remote directory is $FILE_COUNT, maximum allowed is $MAX_BACKUPS"
 
 if [ "$FILE_COUNT" -gt "$MAX_BACKUPS" ]; then
-  OLDEST_FILE=$(rclone lsl "${RCLONE_ID}":"${REMOTE_PATH}" | sort -k3 | head -n 1 | awk '{print $NF}')
-  log_command "Deleting oldest file: $OLDEST_FILE" rclone deletefile "${RCLONE_ID}":"${REMOTE_PATH}"/"$OLDEST_FILE"
+  EXCESS_FILE_COUNT=$((FILE_COUNT - MAX_BACKUPS))
+  log "Deleting $EXCESS_FILE_COUNT oldest files to maintain the limit of $MAX_BACKUPS backups"
+  rclone lsl "${RCLONE_ID}:${REMOTE_PATH}" | sort -k3 | head -n "$EXCESS_FILE_COUNT" | awk '{print $NF}' | while read -r OLDEST_FILE; do
+    log_command "Deleting oldest file: $OLDEST_FILE" rclone deletefile "${RCLONE_ID}:${REMOTE_PATH}/$OLDEST_FILE"
+  done
 fi
