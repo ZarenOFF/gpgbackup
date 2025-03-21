@@ -117,7 +117,7 @@ rm "$BACKUP_DEST/$ENCRYPTED_FILENAME"
 
 # Вывод информации о файлах в удаленной директории
 log "Detailed information about files in remote directory (${RCLONE_ID}:${REMOTE_PATH}):"
-log_command "Listing files in remote directory" bash -c "rclone lsl \"${RCLONE_ID}:${REMOTE_PATH}\" | sort -k3"
+log_command "Listing files in remote directory" bash -c "rclone lsl \"${RCLONE_ID}:${REMOTE_PATH}\" | sort -k2"
 
 # Проверка количества файлов в удаленной директории и удаление самого старого, если их больше 7
 FILE_COUNT=$(rclone lsf --files-only "${RCLONE_ID}":"${REMOTE_PATH}" | wc -l)
@@ -127,7 +127,7 @@ log "Current number of files in remote directory is $FILE_COUNT, maximum allowed
 if [ "$FILE_COUNT" -gt "$MAX_BACKUPS" ]; then
   EXCESS_FILE_COUNT=$((FILE_COUNT - MAX_BACKUPS))
   log "Deleting $EXCESS_FILE_COUNT oldest files to maintain the limit of $MAX_BACKUPS backups"
-  rclone lsl "${RCLONE_ID}:${REMOTE_PATH}" | sort -k3 | head -n "$EXCESS_FILE_COUNT" | awk '{print $NF}' | while read -r OLDEST_FILE; do
+  rclone lsl "${RCLONE_ID}:${REMOTE_PATH}" | sort -k2 | head -n "$EXCESS_FILE_COUNT" | awk '{print $NF}' | while read -r OLDEST_FILE; do
     log_command "Deleting oldest file: $OLDEST_FILE" rclone deletefile "${RCLONE_ID}:${REMOTE_PATH}/$OLDEST_FILE"
   done
 fi
