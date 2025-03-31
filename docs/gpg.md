@@ -67,3 +67,26 @@ gpg --export-secret-keys -a "email@example.com" > ~/gpg_key.asc
 ```
 
 Here, `email@example.com` is the email address associated with your key, and `gpg_key.asc` is the file where your private key will be saved in ASCII format.
+
+#### Importing the Private Key
+
+To import your private key, use the command:
+
+```sh
+gpg --import gpg_key.asc
+```
+
+After that you need to set trust for the key using the command:
+
+```sh
+gpg --edit-key email@example.com
+```
+
+After that:
+
+```shell
+trust
+5
+y
+quit
+```
